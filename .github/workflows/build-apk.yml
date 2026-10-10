@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,6 +16,25 @@ jobs:
     steps:
       - name: Baixar projeto
         uses: actions/checkout@v4
+
+      - name: Restaurar aplicativo
+        run: |
+          set -euo pipefail
+          cat .source/index.html.gz.b64.part.* | base64 -d > index.html.gz
+          gzip -dc index.html.gz > index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, base64
+
+          html = Path("index.html").read_text(encoding="utf-8")
+          match = re.search(r'<img class="brand-logo" src="data:image/jpeg;base64,([^"]+)"', html)
+          if not match:
+              raise SystemExit("Logo Florindo embutida nao encontrada no HTML")
+          Path("icon.jpg").write_bytes(base64.b64decode(match.group(1)))
+          print(f"Aplicativo restaurado: {len(html)} caracteres")
+          PY
+          test -s index.html
+          test -s icon.jpg
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
@@ -36,14 +58,26 @@ jobs:
         run: |
           npm init -y
           npm install @capacitor/core@8 @capacitor/android@8
-          npm install --save-dev @capacitor/cli@8 @capacitor/assets
+          npm install --save-dev @capacitor/cli@8 @capacitor/assets sharp
+
+      - name: Preparar logo Android
+        run: |
+          node <<'NODE'
+          const sharp = require('sharp');
+          sharp('icon.jpg')
+            .resize(1536, 1536, { fit: 'cover' })
+            .png()
+            .toFile('icon.png')
+            .then(() => console.log('Logo Android preparada.'))
+            .catch(err => { console.error(err); process.exit(1); });
+          NODE
 
       - name: Preparar arquivos web
         run: |
           mkdir -p www
           test -f index.html || (echo "ERRO: index.html nao encontrado" && exit 1)
           cp index.html www/index.html
-          if [ -f icon.png ]; then cp icon.png www/icon.png; fi
+          cp icon.png www/icon.png
 
       - name: Criar configuracao Capacitor
         run: |
@@ -77,25 +111,30 @@ jobs:
           ]
           missing = [x for x in additions if x not in text]
           if missing:
-              m = re.search(r'<manifest[^>]*>', text)
-              if not m:
+              match = re.search(r'<manifest[^>]*>', text)
+              if not match:
                   raise SystemExit("Tag <manifest> nao encontrada")
               block = "\n    " + "\n    ".join(missing)
-              text = text[:m.end()] + block + text[m.end():]
+              text = text[:match.end()] + block + text[match.end():]
               path.write_text(text, encoding="utf-8")
+          print("Permissoes de rede configuradas.")
           PY
 
       - name: Gerar icones e splash
         run: |
-          if [ -f icon.png ]; then
-            mkdir -p assets
-            cp icon.png assets/icon.png
-            cp icon.png assets/splash.png
-            npx capacitor-assets generate --android
-          fi
+          mkdir -p assets
+          cp icon.png assets/icon.png
+          cp icon.png assets/splash.png
+          npx capacitor-assets generate --android
 
       - name: Sincronizar Capacitor
         run: npx cap sync android
+
+      - name: Conferir configuracao
+        run: |
+          grep -n "android.permission.INTERNET" android/app/src/main/AndroidManifest.xml
+          grep -n "Florindo Sistemas" android/app/src/main/res/values/strings.xml
+          test -s www/index.html
 
       - name: Gerar APK debug
         run: |
