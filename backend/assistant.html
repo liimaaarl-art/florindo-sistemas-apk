@@ -9,7 +9,11 @@ document.addEventListener('submit',async event=>{
  event.preventDefault();if(florindoAiBusy)return;
  const form=event.target,command=String(new FormData(form).get('command')||'').trim();
  if(!command)return;
- if(!neonOnline||!neonToken()){toast('Entre na sua conta e aguarde a sincronização com o Neon.');return}
+ const token=neonToken();
+ if(!token){toast('Sua sessão de sincronização não está ativa. Saia e entre novamente uma vez para conectar Neon e IA.');return}
+ if(!neonOnline){
+  try{await connectNeon(token)}catch(e){toast('Não foi possível reativar o Neon. Saia e entre novamente para renovar a sessão.');return}
+ }
  const endpoint=globalThis.FLORINDO_AI_URL;
  if(!endpoint){toast('O servidor Gemini ainda precisa ser publicado.');return}
  await mutationChain.catch(()=>{});
@@ -21,7 +25,7 @@ document.addEventListener('submit',async event=>{
  try{
  const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+neonToken()},body:JSON.stringify({command,requestId}),signal:AbortSignal.timeout(100000)});
  const result=await response.json();
- if(!response.ok){if(response.status!==409)florindoAiPending=null;throw Error(result.error||result.message||'Não foi possível concluir.')}
+ if(!response.ok){if(response.status!==409)florindoAiPending=null;if(response.status===401){setNeonToken('',false);showLogin('Sua sessão do Neon expirou. Entre novamente para continuar.','login')}throw Error(result.error||result.message||'Não foi possível concluir.')}
  applied=!!result.applied;florindoAiPending=null;florindoAiMessage=result.message||'Solicitação concluída.';
  if(applied){
   const remote=await neonRPC('florindo_get_state',{p_token:neonToken()});
