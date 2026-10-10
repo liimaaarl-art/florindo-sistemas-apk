@@ -23,10 +23,14 @@ jobs:
           cat .source/index.html.gz.b64.part.* | base64 -d | gzip -d > index.html
           test -s index.html
 
-      - name: Aplicar login e ajuste da barra superior
+      - name: Aplicar login final e ajuste da barra superior
         run: |
           python3 .github/scripts/patch-login.py index.html
+          python3 .github/scripts/patch-final-login.py index.html
           grep -q 'id="loginForm"' index.html
+          grep -q 'id="loginShowPassword"' index.html
+          grep -q 'id="loginRemember"' index.html
+          grep -q 'FINAL_LOGIN_VERSION' index.html
           grep -q 'florindo_login' index.html
 
       - name: Configurar Node.js
@@ -39,9 +43,8 @@ jobs:
           node --test backend/engine.test.mjs backend/recovery.test.mjs backend/prototype.test.mjs backend/rpc.test.mjs
           python3 .github/scripts/patch-recovery.py index.html
           python3 .github/scripts/patch-gemini.py index.html
-          python3 .github/scripts/patch-prototype.py index.html
 
-      - name: Preparar acesso privado do protótipo
+      - name: Preparar credencial temporária de verificação
         run: |
           node --input-type=module <<'JS'
           import {randomBytes} from 'node:crypto';
@@ -51,14 +54,14 @@ jobs:
           appendFileSync(process.env.GITHUB_ENV,'PROTOTYPE_SETUP_KEY='+key+'\n');
           JS
 
-      - name: Publicar servidor Gemini
+      - name: Publicar servidor Neon + Gemini
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           if [ -z "$NEON_API_KEY" ] || [ -z "$GEMINI_API_KEY" ]; then
-            echo "Gemini ainda não publicado: configure NEON_API_KEY e GEMINI_API_KEY nos secrets."
-            exit 0
+            echo "::error::Versão final exige NEON_API_KEY e GEMINI_API_KEY configuradas."
+            exit 1
           fi
           npm install --prefix backend --no-audit --no-fund
           npx --prefix backend esbuild backend/index.mjs --bundle --platform=node --target=node24 --format=esm --banner:js="import{createRequire as ___cr}from'module';import{fileURLToPath as ___f}from'url';import{dirname as ___d}from'path';const require=___cr(import.meta.url);const __filename=___f(import.meta.url);const __dirname=___d(__filename);" --outfile=backend/dist/index.mjs
@@ -67,19 +70,43 @@ jobs:
           cd ../..
           node .github/scripts/deploy-gemini.mjs
 
-      - name: Preparar sessão do APK de testes
+      - name: Validar Neon e Gemini de ponta a ponta
         run: |
           node --input-type=module <<'JS'
-          import {appendFileSync} from 'node:fs';
-          const base=process.env.FLORINDO_AI_URL;
-          if(!base)throw Error('O acesso ao Neon exige publicar o servidor antes do APK.');
-          const data={token:process.env.FLORINDO_PROTOTYPE_TOKEN};
-          if(!/^[a-f0-9]{64}$/.test(data.token||''))throw Error('Sessão do protótipo inválida.');
-          const probe=await fetch(base.replace(/\/$/,'')+'/rpc/florindo_get_state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_token:data.token}),signal:AbortSignal.timeout(30000)});
-          if(!probe.ok)throw Error('A sessão do protótipo não conseguiu conectar ao Neon.');
+          import {randomUUID} from 'node:crypto';
+          const base=(process.env.FLORINDO_AI_URL||'').replace(/\/$/,'');
+          const token=process.env.FLORINDO_PROTOTYPE_TOKEN||'';
+          if(!base.startsWith('https://'))throw Error('Endpoint do assistente não foi publicado em HTTPS.');
+          if(!/^[a-f0-9]{64}$/.test(token))throw Error('Sessão temporária de verificação inválida.');
+
+          const probe=await fetch(base+'/rpc/florindo_get_state',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({p_token:token}),
+            signal:AbortSignal.timeout(30000)
+          });
+          if(!probe.ok)throw Error('Falha na comunicação do aplicativo com o Neon. HTTP '+probe.status);
           const state=await probe.json();
-          if(!Array.isArray(state.clients)||!Array.isArray(state.projects))throw Error('Resposta inválida na conexão com o Neon.');
-          appendFileSync(process.env.GITHUB_ENV,'FLORINDO_PROTOTYPE_TOKEN='+data.token+'\n');
+          for(const key of ['clients','projects','updates','contracts','finances']){
+            if(!Array.isArray(state[key]))throw Error('Resposta inválida do Neon em '+key+'.');
+          }
+
+          const requestId='finalcheck-'+randomUUID().replaceAll('-','');
+          const ai=await fetch(base+'/',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body:JSON.stringify({
+              requestId,
+              command:'Não altere nenhum cadastro. Apenas confirme em uma frase curta que a integração está funcionando.'
+            }),
+            signal:AbortSignal.timeout(90000)
+          });
+          const raw=await ai.text();
+          if(!ai.ok)throw Error('Falha na comunicação Neon + Gemini. HTTP '+ai.status+' '+raw.slice(0,300));
+          const result=JSON.parse(raw);
+          if(result.applied!==false)throw Error('A verificação do Gemini não deveria alterar cadastros.');
+          if(typeof result.message!=='string'||!result.message.trim())throw Error('Gemini não retornou confirmação válida.');
+          console.log('Neon e Gemini verificados com sucesso.');
           JS
 
       - name: Configurar endereço do assistente no APK
@@ -90,8 +117,18 @@ jobs:
           p = Path('index.html')
           text = p.read_text(encoding='utf-8')
           url = os.environ.get('FLORINDO_AI_URL', '')
-          text = re.sub(r'globalThis.FLORINDO_AI_URL=.*?;</script>', 'globalThis.FLORINDO_AI_URL=' + json.dumps(url) + ';</script>', text, count=1)
-          text = re.sub(r"globalThis.FLORINDO_PROTOTYPE_TOKEN=.*?;</script>", 'globalThis.FLORINDO_PROTOTYPE_TOKEN=' + json.dumps(os.environ.get('FLORINDO_PROTOTYPE_TOKEN', '')) + ';</script>', text, count=1)
+          if not url.startswith('https://'):
+              raise SystemExit('Endpoint final do assistente não foi configurado em HTTPS.')
+          text, count = re.subn(
+              r'globalThis.FLORINDO_AI_URL=.*?;</script>',
+              'globalThis.FLORINDO_AI_URL=' + json.dumps(url) + ';</script>',
+              text,
+              count=1
+          )
+          if count != 1:
+              raise SystemExit('Configuração do assistente não encontrada no HTML.')
+          if 'FLORINDO_PROTOTYPE_TOKEN' in text:
+              raise SystemExit('Token de protótipo não pode ser incluído no APK final.')
           p.write_text(text, encoding='utf-8')
           PY
 
@@ -108,7 +145,7 @@ jobs:
         run: |
           sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Preparar dependencias
+      - name: Preparar dependências Android
         run: |
           npm init -y
           npm install @capacitor/core@8 @capacitor/android@8
@@ -143,16 +180,16 @@ jobs:
       - name: Preparar arquivos web
         run: |
           mkdir -p www
-          test -f index.html || (echo "ERRO: index.html nao encontrado" && exit 1)
+          test -f index.html || (echo "ERRO: index.html não encontrado" && exit 1)
           cp index.html www/index.html
           if [ -f icon.png ]; then cp icon.png www/icon.png; fi
 
-      - name: Criar configuracao Capacitor
+      - name: Criar configuração Capacitor final
         run: |
           cat > capacitor.config.json <<'EOF'
           {
-            "appId": "com.florindosistemas.central.teste",
-            "appName": "Florindo Sistemas Testes",
+            "appId": "com.florindosistemas.central",
+            "appName": "Florindo Sistemas",
             "webDir": "www",
             "android": {
               "allowMixedContent": false
@@ -180,13 +217,13 @@ jobs:
           if missing:
               m = re.search(r'<manifest[^>]*>', text)
               if not m:
-                  raise SystemExit("Tag <manifest> nao encontrada")
+                  raise SystemExit("Tag <manifest> não encontrada")
               block = "\n    " + "\n    ".join(missing)
               text = text[:m.end()] + block + text[m.end():]
               path.write_text(text, encoding="utf-8")
           PY
 
-      - name: Gerar icones e splash
+      - name: Gerar ícones e splash
         run: |
           if [ -f icon.png ]; then
             mkdir -p assets
@@ -198,22 +235,29 @@ jobs:
       - name: Sincronizar Capacitor
         run: npx cap sync android
 
-      - name: Conferir configuracao
+      - name: Conferir versão final
         run: |
           grep -n "android.permission.INTERNET" android/app/src/main/AndroidManifest.xml
           grep -n "florindo_login" www/index.html
+          grep -n "loginShowPassword" www/index.html
+          grep -n "loginRemember" www/index.html
+          grep -n "FINAL_LOGIN_VERSION" www/index.html
           grep -n "safe-area-inset-top" www/index.html
+          grep -n "FLORINDO_AI_URL" www/index.html
+          ! grep -q "FLORINDO_PROTOTYPE_TOKEN" www/index.html
+          grep -q '"appId": "com.florindosistemas.central"' capacitor.config.json
+          grep -q '"appName": "Florindo Sistemas"' capacitor.config.json
 
-      - name: Gerar APK debug
+      - name: Gerar APK final
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Disponibilizar APK
+      - name: Disponibilizar APK final
         uses: actions/upload-artifact@v4
         with:
-          name: Florindo-Sistemas-Testes-APK
+          name: Florindo-Sistemas-Final-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
