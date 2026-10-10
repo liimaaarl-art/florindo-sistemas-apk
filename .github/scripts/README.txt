@@ -1,0 +1,1 @@
+O patch-login.py é aplicado durante o build para adicionar autenticação e ajuste de safe area ao HTML restaurado.

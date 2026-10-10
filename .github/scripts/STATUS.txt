@@ -1,0 +1,1 @@
+patch-login.py aplicado pelo workflow antes do build do APK.
