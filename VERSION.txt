@@ -1,3 +1,3 @@
 Florindo Sistemas APK
-Login seguro + ajuste safe area Android
-2026-10-10
+Login seguro + assistente Gemini conectado ao Neon
+2026-10-10 — publicação do servidor e geração do APK
