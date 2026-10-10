@@ -1,0 +1,12 @@
+node_modules/
+android/
+www/
+assets/
+package.json
+package-lock.json
+capacitor.config.json
+index.html
+index.html.gz
+icon.jpg
+icon.png
+.DS_Store
