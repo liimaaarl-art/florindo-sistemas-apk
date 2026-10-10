@@ -15,6 +15,8 @@ jobs:
           node-version: 24
       - name: Validar regras e integração do APK
         run: |
+          npm install --prefix backend --no-audit --no-fund
+          npx --prefix backend esbuild backend/index.mjs --bundle --platform=node --target=node24 --format=esm --outfile=/tmp/florindo-server.mjs
           node --check backend/index.mjs
           node --check .github/scripts/deploy-gemini.mjs
           node --test backend/engine.test.mjs
