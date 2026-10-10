@@ -2,14 +2,30 @@
 
 Aplicativo Android do **Florindo Sistemas**, empacotado com Capacitor e conectado ao backend Neon.
 
-## Gerar o APK
+## APK automático
 
-O GitHub Actions gera automaticamente um APK de teste (`app-debug.apk`) a cada push na branch `main` e também pode ser executado manualmente em **Actions → Build Florindo Sistemas APK → Run workflow**.
+O GitHub Actions gera um APK Android de teste a cada atualização da branch `main`.
+
+Para baixar:
+
+1. Abra **Actions** no GitHub.
+2. Entre na execução **Build Florindo Sistemas APK**.
+3. No final da página, baixe o artifact **Florindo-Sistemas-APK**.
+4. Dentro do ZIP estará o `app-debug.apk`.
+
+Também é possível executar manualmente em **Actions → Build Florindo Sistemas APK → Run workflow**.
 
 ## Estrutura
 
-- `index.html` — aplicação Florindo Sistemas
-- `icon.png` — ícone do aplicativo
-- `.github/workflows/build-apk.yml` — automação de build Android
+- `.source/index.html.gz.b64.part.*` — aplicação Florindo Sistemas compactada em partes; o workflow reconstrói o `index.html` antes do build.
+- `.github/workflows/build-apk.yml` — automação completa de geração do Android/APK.
+- A logo Florindo Educação utilizada no aplicativo já está incorporada ao HTML e é convertida automaticamente no ícone e splash do Android.
 
-O APK gerado aparece como artifact chamado **Florindo-Sistemas-APK** na execução do workflow.
+## Aplicativo
+
+- Nome: **Florindo Sistemas**
+- App ID: `com.florindosistemas.central`
+- Backend: **Neon**
+- Plataforma Android: **Capacitor 8**
+
+Os arquivos `android/`, `www/`, dependências Node e demais artefatos são gerados automaticamente pela Action e não precisam ficar versionados.
