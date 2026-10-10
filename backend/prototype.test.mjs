@@ -19,5 +19,5 @@ test('prototype session is random, time-limited, and only hashed in database',as
  assert.equal(result.status,200);assert.match(result.data.token,/^[a-f0-9]{64}$/);
  const inserted=queries.find(q=>q.sql.startsWith('INSERT'));
  assert.equal(inserted.values[0],createHash('md5').update(result.data.token).digest('hex'));
- assert.equal(inserted.values[1],'owner');assert(inserted.sql.includes("interval '90 days'"));
+ assert.equal(inserted.values[1],'owner');assert(inserted.sql.includes("interval '365 days'"));
 });
