@@ -30,6 +30,39 @@ jobs:
         with:
           node-version: 22
 
+      - name: Validar assistente Gemini
+        run: |
+          node --test backend/engine.test.mjs
+          python3 .github/scripts/patch-gemini.py index.html
+
+      - name: Publicar servidor Gemini
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$NEON_API_KEY" ] || [ -z "$GEMINI_API_KEY" ]; then
+            echo "Gemini ainda não publicado: configure NEON_API_KEY e GEMINI_API_KEY nos secrets."
+            exit 0
+          fi
+          npm install --prefix backend --no-audit --no-fund
+          npx --prefix backend esbuild backend/index.mjs --bundle --platform=node --target=node24 --format=esm --banner:js="import{createRequire as ___cr}from'module';import{fileURLToPath as ___f}from'url';import{dirname as ___d}from'path';const require=___cr(import.meta.url);const __filename=___f(import.meta.url);const __dirname=___d(__filename);" --outfile=backend/dist/index.mjs
+          cd backend/dist
+          zip -q ../function.zip index.mjs
+          cd ../..
+          node .github/scripts/deploy-gemini.mjs
+
+      - name: Configurar endereço do assistente no APK
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, os, re
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          url = os.environ.get('FLORINDO_AI_URL', '')
+          text = re.sub(r'globalThis.FLORINDO_AI_URL=.*?;</script>', 'globalThis.FLORINDO_AI_URL=' + json.dumps(url) + ';</script>', text, count=1)
+          p.write_text(text, encoding='utf-8')
+          PY
+
       - name: Configurar Java
         uses: actions/setup-java@v4
         with:

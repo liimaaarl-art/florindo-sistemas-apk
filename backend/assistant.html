@@ -1,0 +1,36 @@
+
+<script>
+let florindoAiBusy=false,florindoAiMessage='',florindoAiPending=null;
+const florindoAiCommit=commit;
+commit=function(mutator){if(florindoAiBusy)return Promise.reject(Error('Aguarde o assistente terminar antes de editar os cadastros.'));return florindoAiCommit(mutator)};
+assistantPage=function(){return header('Assistente Gemini','Envie um comando para atualizar seus cadastros no Neon.')+'<section class="panel"><h2>O que vamos organizar?</h2><p class="subtext" style="margin:16px 0">Exemplo: “Atualize o banco do sistema da Clínica Maria para Neon e registre uma cobrança de R$ 150 com vencimento em 10 de novembro de 2026.”</p><form id="florindoAiForm"><div class="field"><label for="florindoAiCommand">Seu comando</label><textarea id="florindoAiCommand" name="command" required maxlength="6000" placeholder="Informe o cliente, o sistema e o que deseja alterar." '+(florindoAiBusy?'disabled':'')+'></textarea></div><button class="button primary" style="margin-top:16px" '+(florindoAiBusy?'disabled':'')+'>'+ (florindoAiBusy?'Organizando…':'Enviar comando')+'</button></form><p id="florindoAiResult" role="status" aria-live="polite" style="white-space:pre-wrap;margin-top:20px">'+esc(florindoAiMessage)+'</p><p class="helper">Os comandos alteram cadastros, sistemas, versões, contratos e financeiro. Se faltar informação, o assistente pede detalhes. Arquivos, layout e código não são alterados.</p></section>'};
+document.addEventListener('submit',async event=>{
+ if(event.target.id!=='florindoAiForm')return;
+ event.preventDefault();if(florindoAiBusy)return;
+ const form=event.target,command=String(new FormData(form).get('command')||'').trim();
+ if(!command)return;
+ if(!neonOnline||!neonToken()){toast('Entre na sua conta e aguarde a sincronização com o Neon.');return}
+ const endpoint=globalThis.FLORINDO_AI_URL;
+ if(!endpoint){toast('O servidor Gemini ainda precisa ser publicado.');return}
+ await mutationChain.catch(()=>{});
+ florindoAiBusy=true;form.querySelector('button').disabled=true;
+ florindoAiMessage='Consultando o Gemini…';$('florindoAiResult').textContent=florindoAiMessage;
+ let applied=false;
+ const requestId=florindoAiPending?.command===command?florindoAiPending.id:uid();
+ florindoAiPending={command,id:requestId};
+ try{
+ const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+neonToken()},body:JSON.stringify({command,requestId}),signal:AbortSignal.timeout(100000)});
+ const result=await response.json();
+ if(!response.ok){if(response.status!==409)florindoAiPending=null;throw Error(result.error||result.message||'Não foi possível concluir.')}
+ applied=!!result.applied;florindoAiPending=null;florindoAiMessage=result.message||'Solicitação concluída.';
+ if(applied){
+  const remote=await neonRPC('florindo_get_state',{p_token:neonToken()});
+  const next=JSON.parse(JSON.stringify(state));
+  for(const key of ['clients','projects','updates','contracts','finances'])next[key]=remote[key]||[];
+  next.contracts=next.contracts.map(c=>({...c,file:state.contracts.find(x=>x.id===c.id)?.file||null}));
+  const valid=D.validateBackup(next);await writeState(valid);state=valid;
+ }
+ }catch(e){florindoAiMessage=applied?'As alterações foram salvas no Neon, mas a tela não atualizou. Feche e abra o aplicativo para recarregar.':e.name==='TimeoutError'||e.name==='TypeError'?'Não foi possível confirmar a resposta. Envie o mesmo comando novamente para consultar a solicitação sem duplicá-la.':e.message||'Não foi possível concluir.'}
+ finally{florindoAiBusy=false;if(route==='assistant')render();toast(florindoAiMessage)}
+});
+</script>
