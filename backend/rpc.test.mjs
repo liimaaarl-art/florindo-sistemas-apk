@@ -7,6 +7,21 @@ test('app RPC rejects unlisted operations and unauthenticated requests',async()=
  assert.equal((await appRPC(request('arbitrary_sql',{}),pool)).status,404);
  assert.equal((await appRPC(request('florindo_get_state',{}),pool)).status,401);
 });
+test('registration creates a new user and returns a session token',async()=>{
+ const calls=[],pool={async query(sql,values){calls.push({sql,values});if(sql.includes('INSERT INTO public.florindo_app_users'))return {rows:[{username:'novo.usuario'}]};return {rows:[{result:{token:'b'.repeat(64),username:'novo.usuario'}}]}}};
+ const result=await appRPC(request('florindo_register',{p_username:'novo.usuario',p_password:'Senha@123'}),pool);
+ assert.equal(result.status,201);
+ assert.equal(result.data.username,'novo.usuario');
+ assert.equal(calls.length,2);
+ assert.deepEqual(calls[0].values,['novo.usuario','Senha@123']);
+ assert.equal(calls[1].sql,'SELECT public.florindo_login($1,$2) AS result');
+});
+test('registration refuses an existing username without changing its password',async()=>{
+ const pool={async query(sql){if(sql.includes('INSERT INTO public.florindo_app_users'))return {rows:[]};throw Error('must not login existing registration')}};
+ const result=await appRPC(request('florindo_register',{p_username:'46150346870',p_password:'NovaSenha@123'}),pool);
+ assert.equal(result.status,409);
+ assert.equal(result.data.error,'username_exists');
+});
 test('login is exposed and binds username/password without requiring a token',async()=>{
  const calls=[],pool={async query(sql,values){calls.push({sql,values});return {rows:[{result:{token:'a'.repeat(64),username:'46150346870'}}]}}};
  const result=await appRPC(request('florindo_login',{p_username:' 46150346870 ',p_password:'secret'}),pool);
