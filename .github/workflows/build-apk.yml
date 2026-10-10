@@ -151,8 +151,8 @@ jobs:
         run: |
           cat > capacitor.config.json <<'EOF'
           {
-            "appId": "com.florindosistemas.central",
-            "appName": "Florindo Sistemas",
+            "appId": "com.florindosistemas.central.teste",
+            "appName": "Florindo Sistemas Testes",
             "webDir": "www",
             "android": {
               "allowMixedContent": false
@@ -213,7 +213,7 @@ jobs:
       - name: Disponibilizar APK
         uses: actions/upload-artifact@v4
         with:
-          name: Florindo-Sistemas-APK
+          name: Florindo-Sistemas-Testes-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
