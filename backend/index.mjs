@@ -1,3 +1,5 @@
+import {appRPC} from './rpc.mjs';
+import {prototypeAccess} from './prototype.mjs';
 import {recovery} from './recovery.mjs';
 import pg from 'pg';
 import { attachDatabasePool } from '@neon/functions';
@@ -31,6 +33,12 @@ export default {async fetch(req){
  if(req.method==='OPTIONS')return json({},200,origin);
  if(req.method!=='POST')return json({error:'Use POST.'},405,origin);
  if(!process.env.DATABASE_URL)return json({error:'Servidor ainda não configurado.'},503,origin);
+ if(new URL(req.url).pathname.startsWith('/rpc/')){
+  try{const result=await appRPC(req,pool);return json(result.data,result.status,origin)}catch{return json({error:'Não foi possível sincronizar com o Neon.'},503,origin)}
+ }
+ if(new URL(req.url).pathname==='/prototype-access'){
+  try{const result=await prototypeAccess(req,pool);return json(result.data,result.status,origin)}catch{return json({error:'Não foi possível preparar o protótipo.'},503,origin)}
+ }
  if(new URL(req.url).pathname.startsWith('/auth/')){
   try{const result=await recovery(req,pool);return json(result.data,result.status,origin)}catch{return json({error:'Recuperação indisponível. Tente novamente.'},503,origin)}
  }

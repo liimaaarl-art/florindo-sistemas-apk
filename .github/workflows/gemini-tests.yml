@@ -19,11 +19,12 @@ jobs:
           npx --prefix backend esbuild backend/index.mjs --bundle --platform=node --target=node24 --format=esm --outfile=/tmp/florindo-server.mjs
           node --check backend/index.mjs
           node --check .github/scripts/deploy-gemini.mjs
-          node --test backend/engine.test.mjs backend/recovery.test.mjs
+          node --test backend/engine.test.mjs backend/recovery.test.mjs backend/prototype.test.mjs backend/rpc.test.mjs
           cat .source/index.html.gz.b64.part.* | base64 -d | gzip -d > index.html
           python3 .github/scripts/patch-login.py index.html
           python3 .github/scripts/patch-recovery.py index.html
           python3 .github/scripts/patch-gemini.py index.html
+          python3 .github/scripts/patch-prototype.py index.html
           python3 - <<'PY'
           from pathlib import Path
           import re
@@ -34,5 +35,7 @@ jobs:
           assert 'data-password-target="loginPassword"' in s and 'recoveryResetForm' in s
           assert 'RESEND_API_KEY' not in s and 'florindoeducacao@gmail.com' not in s
           assert s.count('id="loginPassword"') == 1
+          assert '<body class="auth-locked">' not in s
+          assert 'PROTOTYPE_SETUP_KEY' not in s
           PY
           for script in /tmp/check-*.js; do node --check "$script"; done

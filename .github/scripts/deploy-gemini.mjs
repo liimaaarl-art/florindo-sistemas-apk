@@ -6,7 +6,7 @@ const headers={Authorization:'Bearer '+process.env.NEON_API_KEY};
 const form=new FormData();
 form.append('zip',new Blob([await readFile('backend/function.zip')],{type:'application/zip'}),'function.zip');
 const environment={GEMINI_API_KEY:process.env.GEMINI_API_KEY};
-if(process.env.RESEND_API_KEY)environment.RESEND_API_KEY=process.env.RESEND_API_KEY;
+if(process.env.PROTOTYPE_SETUP_KEY)environment.PROTOTYPE_SETUP_KEY=process.env.PROTOTYPE_SETUP_KEY;
 form.append('environment',JSON.stringify(environment));
 form.append('runtime','nodejs24');
 const response=await fetch(base+'/deployments',{method:'POST',headers,body:form,signal:AbortSignal.timeout(60000)});

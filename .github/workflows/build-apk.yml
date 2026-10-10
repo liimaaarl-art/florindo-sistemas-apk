@@ -32,15 +32,25 @@ jobs:
 
       - name: Validar assistente Gemini
         run: |
-          node --test backend/engine.test.mjs backend/recovery.test.mjs
+          node --test backend/engine.test.mjs backend/recovery.test.mjs backend/prototype.test.mjs backend/rpc.test.mjs
           python3 .github/scripts/patch-recovery.py index.html
           python3 .github/scripts/patch-gemini.py index.html
+          python3 .github/scripts/patch-prototype.py index.html
+
+      - name: Preparar acesso privado do protótipo
+        run: |
+          node --input-type=module <<'JS'
+          import {randomBytes} from 'node:crypto';
+          import {appendFileSync} from 'node:fs';
+          const key=randomBytes(32).toString('hex');
+          console.log('::add-mask::'+key);
+          appendFileSync(process.env.GITHUB_ENV,'PROTOTYPE_SETUP_KEY='+key+'\n');
+          JS
 
       - name: Publicar servidor Gemini
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: |
           if [ -z "$NEON_API_KEY" ] || [ -z "$GEMINI_API_KEY" ]; then
             echo "Gemini ainda não publicado: configure NEON_API_KEY e GEMINI_API_KEY nos secrets."
@@ -53,6 +63,24 @@ jobs:
           cd ../..
           node .github/scripts/deploy-gemini.mjs
 
+      - name: Preparar sessão do APK de testes
+        run: |
+          node --input-type=module <<'JS'
+          import {appendFileSync} from 'node:fs';
+          const base=process.env.FLORINDO_AI_URL;
+          if(!base)throw Error('O acesso ao Neon exige publicar o servidor antes do APK.');
+          const response=await fetch(base.replace(/\/$/,'')+'/prototype-access',{method:'POST',headers:{Authorization:'Bearer '+process.env.PROTOTYPE_SETUP_KEY},signal:AbortSignal.timeout(30000)});
+          if(!response.ok)throw Error('Não foi possível preparar o acesso do protótipo. HTTP '+response.status);
+          const data=await response.json();
+          if(!/^[a-f0-9]{64}$/.test(data.token||''))throw Error('Sessão inválida.');
+          console.log('::add-mask::'+data.token);
+          const probe=await fetch(base.replace(/\/$/,'')+'/rpc/florindo_get_state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_token:data.token}),signal:AbortSignal.timeout(30000)});
+          if(!probe.ok)throw Error('A sessão do protótipo não conseguiu conectar ao Neon.');
+          const state=await probe.json();
+          if(!Array.isArray(state.clients)||!Array.isArray(state.projects))throw Error('Resposta inválida na conexão com o Neon.');
+          appendFileSync(process.env.GITHUB_ENV,'FLORINDO_PROTOTYPE_TOKEN='+data.token+'\n');
+          JS
+
       - name: Configurar endereço do assistente no APK
         run: |
           python3 - <<'PY'
@@ -62,6 +90,7 @@ jobs:
           text = p.read_text(encoding='utf-8')
           url = os.environ.get('FLORINDO_AI_URL', '')
           text = re.sub(r'globalThis.FLORINDO_AI_URL=.*?;</script>', 'globalThis.FLORINDO_AI_URL=' + json.dumps(url) + ';</script>', text, count=1)
+          text = re.sub(r"globalThis.FLORINDO_PROTOTYPE_TOKEN=.*?;</script>", 'globalThis.FLORINDO_PROTOTYPE_TOKEN=' + json.dumps(os.environ.get('FLORINDO_PROTOTYPE_TOKEN', '')) + ';</script>', text, count=1)
           p.write_text(text, encoding='utf-8')
           PY
 
