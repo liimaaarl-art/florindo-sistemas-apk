@@ -32,13 +32,15 @@ jobs:
 
       - name: Validar assistente Gemini
         run: |
-          node --test backend/engine.test.mjs
+          node --test backend/engine.test.mjs backend/recovery.test.mjs
+          python3 .github/scripts/patch-recovery.py index.html
           python3 .github/scripts/patch-gemini.py index.html
 
       - name: Publicar servidor Gemini
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: |
           if [ -z "$NEON_API_KEY" ] || [ -z "$GEMINI_API_KEY" ]; then
             echo "Gemini ainda não publicado: configure NEON_API_KEY e GEMINI_API_KEY nos secrets."
