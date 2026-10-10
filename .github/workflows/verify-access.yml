@@ -23,6 +23,7 @@ jobs:
           const options={headers:{'Content-Type':'application/json',Origin:'https://localhost'},signal:AbortSignal.timeout(30000)};
           const login=await fetch(api+'/rpc/florindo_login',{...options,method:'POST',body:JSON.stringify({p_username:'nonexistent-test-user',p_password:'not-a-real-password'})});
           const loginBody=await login.json();
+          console.log('Login probe:',login.status,loginBody.message||loginBody.error||'no message');
           assert(!login.ok&&loginBody.message==='invalid_credentials','Login RPC must run and reject invalid credentials');
           for(const table of ['florindo_app_users','florindo_app_sessions','clients']){
             const response=await fetch(api+'/'+table+'?limit=0',{...options,method:'GET'});
