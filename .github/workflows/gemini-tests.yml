@@ -1,0 +1,34 @@
+name: Validate Gemini assistant
+on:
+  push:
+    branches: [main, codex/gemini-assistant]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Validar regras e integração do APK
+        run: |
+          npm install --prefix backend --no-audit --no-fund
+          npx --prefix backend esbuild backend/index.mjs --bundle --platform=node --target=node24 --format=esm --outfile=/tmp/florindo-server.mjs
+          node --check backend/index.mjs
+          node --check .github/scripts/deploy-gemini.mjs
+          node --test backend/engine.test.mjs
+          cat .source/index.html.gz.b64.part.* | base64 -d | gzip -d > index.html
+          python3 .github/scripts/patch-login.py index.html
+          python3 .github/scripts/patch-gemini.py index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          s = Path('index.html').read_text(encoding='utf-8')
+          for i, script in enumerate(re.findall(r'<script[^>]*>(.*?)</script>', s, re.S)):
+              Path('/tmp/check-'+str(i)+'.js').write_text(script, encoding='utf-8')
+          assert 'florindoAiForm' in s and 'GEMINI_API_KEY' not in s
+          PY
+          for script in /tmp/check-*.js; do node --check "$script"; done
