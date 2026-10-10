@@ -23,14 +23,17 @@ jobs:
           cat .source/index.html.gz.b64.part.* | base64 -d | gzip -d > index.html
           test -s index.html
 
-      - name: Aplicar login final e ajuste da barra superior
+      - name: Aplicar cadastro, login e ajuste da barra superior
         run: |
           python3 .github/scripts/patch-login.py index.html
           python3 .github/scripts/patch-final-login.py index.html
           grep -q 'id="loginForm"' index.html
+          grep -q 'id="loginModeRegister"' index.html
+          grep -q 'id="loginModeLogin"' index.html
           grep -q 'id="loginShowPassword"' index.html
           grep -q 'id="loginRemember"' index.html
           grep -q 'FINAL_LOGIN_VERSION' index.html
+          grep -q 'florindo_register' index.html
           grep -q 'florindo_login' index.html
 
       - name: Configurar Node.js
@@ -38,7 +41,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Validar assistente Gemini
+      - name: Validar assistente Gemini e autenticação
         run: |
           node --test backend/engine.test.mjs backend/recovery.test.mjs backend/prototype.test.mjs backend/rpc.test.mjs
           python3 .github/scripts/patch-recovery.py index.html
@@ -238,7 +241,10 @@ jobs:
       - name: Conferir versão final
         run: |
           grep -n "android.permission.INTERNET" android/app/src/main/AndroidManifest.xml
+          grep -n "florindo_register" www/index.html
           grep -n "florindo_login" www/index.html
+          grep -n "loginModeRegister" www/index.html
+          grep -n "loginModeLogin" www/index.html
           grep -n "loginShowPassword" www/index.html
           grep -n "loginRemember" www/index.html
           grep -n "FINAL_LOGIN_VERSION" www/index.html
