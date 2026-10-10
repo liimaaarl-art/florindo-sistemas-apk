@@ -6,6 +6,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: florindo-apk-production
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -69,11 +73,8 @@ jobs:
           import {appendFileSync} from 'node:fs';
           const base=process.env.FLORINDO_AI_URL;
           if(!base)throw Error('O acesso ao Neon exige publicar o servidor antes do APK.');
-          const response=await fetch(base.replace(/\/$/,'')+'/prototype-access',{method:'POST',headers:{Authorization:'Bearer '+process.env.PROTOTYPE_SETUP_KEY},signal:AbortSignal.timeout(30000)});
-          if(!response.ok)throw Error('Não foi possível preparar o acesso do protótipo. HTTP '+response.status);
-          const data=await response.json();
-          if(!/^[a-f0-9]{64}$/.test(data.token||''))throw Error('Sessão inválida.');
-          console.log('::add-mask::'+data.token);
+          const data={token:process.env.FLORINDO_PROTOTYPE_TOKEN};
+          if(!/^[a-f0-9]{64}$/.test(data.token||''))throw Error('Sessão do protótipo inválida.');
           const probe=await fetch(base.replace(/\/$/,'')+'/rpc/florindo_get_state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_token:data.token}),signal:AbortSignal.timeout(30000)});
           if(!probe.ok)throw Error('A sessão do protótipo não conseguiu conectar ao Neon.');
           const state=await probe.json();
