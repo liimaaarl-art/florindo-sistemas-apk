@@ -1,0 +1,112 @@
+name: Build Florindo Sistemas APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar projeto
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Instalar Android API
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Preparar dependencias
+        run: |
+          npm init -y
+          npm install @capacitor/core@8 @capacitor/android@8
+          npm install --save-dev @capacitor/cli@8 @capacitor/assets
+
+      - name: Preparar arquivos web
+        run: |
+          mkdir -p www
+          test -f index.html || (echo "ERRO: index.html nao encontrado" && exit 1)
+          cp index.html www/index.html
+          if [ -f icon.png ]; then cp icon.png www/icon.png; fi
+
+      - name: Criar configuracao Capacitor
+        run: |
+          cat > capacitor.config.json <<'EOF'
+          {
+            "appId": "com.florindosistemas.central",
+            "appName": "Florindo Sistemas",
+            "webDir": "www",
+            "android": {
+              "allowMixedContent": false
+            }
+          }
+          EOF
+
+      - name: Criar projeto Android
+        run: |
+          rm -rf android
+          npx cap add android
+
+      - name: Configurar rede Android
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("android/app/src/main/AndroidManifest.xml")
+          text = path.read_text(encoding="utf-8")
+          additions = [
+              '<uses-permission android:name="android.permission.INTERNET" />',
+              '<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />'
+          ]
+          missing = [x for x in additions if x not in text]
+          if missing:
+              m = re.search(r'<manifest[^>]*>', text)
+              if not m:
+                  raise SystemExit("Tag <manifest> nao encontrada")
+              block = "\n    " + "\n    ".join(missing)
+              text = text[:m.end()] + block + text[m.end():]
+              path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Gerar icones e splash
+        run: |
+          if [ -f icon.png ]; then
+            mkdir -p assets
+            cp icon.png assets/icon.png
+            cp icon.png assets/splash.png
+            npx capacitor-assets generate --android
+          fi
+
+      - name: Sincronizar Capacitor
+        run: npx cap sync android
+
+      - name: Gerar APK debug
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Disponibilizar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Florindo-Sistemas-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
