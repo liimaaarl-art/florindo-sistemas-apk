@@ -1,0 +1,38 @@
+name: Verify login and recovery protection
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/verify-access.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verificar acesso sem expor credenciais
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          const api='https://ep-twilight-tree-b55pdd2g.apirest.c-7.us-east-2.aws.neon.tech/neondb/rest/v1';
+          const ai='https://br-late-night-b59w9eej-florindoai.compute.c-7.us-east-2.aws.neon.tech';
+          const options={headers:{'Content-Type':'application/json',Origin:'https://localhost'},signal:AbortSignal.timeout(30000)};
+          const login=await fetch(api+'/rpc/florindo_login',{...options,method:'POST',body:JSON.stringify({p_username:'nonexistent-test-user',p_password:'not-a-real-password'})});
+          const loginBody=await login.json();
+          assert(!login.ok&&loginBody.message==='invalid_credentials','Login RPC must run and reject invalid credentials');
+          for(const table of ['florindo_app_users','florindo_app_sessions','clients']){
+            const response=await fetch(api+'/'+table+'?limit=0',{...options,method:'GET'});
+            assert([401,403].includes(response.status),'Direct unauthenticated table access must be denied');
+          }
+          const privateSchema=await fetch(api+'/florindo_password_resets?limit=0',{...options,headers:{...options.headers,'Accept-Profile':'florindo_auth_private'},method:'GET'});
+          assert([400,401,403,404,406].includes(privateSchema.status),'Recovery schema must not be exposed');
+          const noSession=await fetch(ai+'/',{...options,method:'POST',body:'{}'});
+          assert.equal(noSession.status,401);
+          const invalidCode=await fetch(ai+'/auth/reset',{...options,method:'POST',body:'{}'});
+          assert.equal(invalidCode.status,400,'Reset endpoint must work independently of app session');
+          console.log('Login RPC available; direct table reads blocked; recovery routes available and protected.');
+          JS
