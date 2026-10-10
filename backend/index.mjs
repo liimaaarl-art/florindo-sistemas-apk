@@ -1,3 +1,4 @@
+import {recovery} from './recovery.mjs';
 import pg from 'pg';
 import { attachDatabasePool } from '@neon/functions';
 import { createHash } from 'node:crypto';
@@ -29,7 +30,11 @@ export default {async fetch(req){
  if(origin&&!origins.has(origin))return json({error:'Origem não autorizada.'},403);
  if(req.method==='OPTIONS')return json({},200,origin);
  if(req.method!=='POST')return json({error:'Use POST.'},405,origin);
- if(!process.env.GEMINI_API_KEY||!process.env.DATABASE_URL)return json({error:'Servidor ainda não configurado.'},503,origin);
+ if(!process.env.DATABASE_URL)return json({error:'Servidor ainda não configurado.'},503,origin);
+ if(new URL(req.url).pathname.startsWith('/auth/')){
+  try{const result=await recovery(req,pool);return json(result.data,result.status,origin)}catch{return json({error:'Recuperação indisponível. Tente novamente.'},503,origin)}
+ }
+ if(!process.env.GEMINI_API_KEY)return json({error:'Servidor ainda não configurado.'},503,origin);
  let requestId='',hash='';
  try{
  const token=(req.headers.get('authorization')||'').replace(/^Bearer /,'');

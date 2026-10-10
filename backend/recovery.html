@@ -1,0 +1,76 @@
+<dialog id="recoveryDialog" class="recovery-dialog" aria-labelledby="recoveryTitle">
+<h2 id="recoveryTitle">Recuperar acesso</h2>
+<p class="recovery-copy">Receba um código no e-mail cadastrado e escolha uma nova senha.</p>
+<form id="recoveryEmailForm">
+<div class="login-field"><label for="recoveryEmail">E-mail cadastrado</label><input id="recoveryEmail" name="email" type="email" autocomplete="email" required maxlength="254"></div>
+<button type="submit" class="button primary login-submit" id="sendRecoveryCode">Enviar código</button>
+</form>
+<form id="recoveryResetForm" hidden>
+<p class="recovery-copy">O código vale por 15 minutos. Confira a caixa de entrada e o spam.</p>
+<div class="login-field"><label for="recoveryCode">Código recebido por e-mail</label><input id="recoveryCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></div>
+<div class="login-field"><label for="newPassword">Nova senha (mínimo 12 caracteres)</label><div class="password-wrap"><input id="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="200" required><button type="button" class="password-toggle" data-password-target="newPassword" aria-controls="newPassword" aria-pressed="false" aria-label="Mostrar senha">Mostrar</button></div></div>
+<div class="login-field"><label for="confirmPassword">Confirmar nova senha</label><div class="password-wrap"><input id="confirmPassword" type="password" autocomplete="new-password" minlength="12" maxlength="200" required><button type="button" class="password-toggle" data-password-target="confirmPassword" aria-controls="confirmPassword" aria-pressed="false" aria-label="Mostrar senha">Mostrar</button></div></div>
+<button type="submit" class="button primary login-submit" id="resetPasswordButton">Salvar nova senha</button>
+<button type="button" class="recovery-secondary" id="requestAnotherCode">Solicitar outro código</button>
+</form>
+<p class="login-error" id="recoveryMessage" role="status" aria-live="polite"></p>
+<button type="button" class="recovery-secondary" id="closeRecovery">Voltar para o login</button>
+</dialog>
+<script>
+(()=>{
+const element=id=>document.getElementById(id),dialog=element('recoveryDialog');
+let requestId='',busy=false;
+function maskPasswords(){
+ document.querySelectorAll('[data-password-target]').forEach(button=>{
+  const input=element(button.dataset.passwordTarget);if(input)input.type='password';
+  button.textContent='Mostrar';button.setAttribute('aria-pressed','false');button.setAttribute('aria-label','Mostrar senha');
+ });
+}
+document.addEventListener('click',event=>{
+ const button=event.target.closest('[data-password-target]');
+ if(!button)return;
+ const input=element(button.dataset.passwordTarget);if(!input)return;
+ const visible=input.type==='password';input.type=visible?'text':'password';
+ button.textContent=visible?'Ocultar':'Mostrar';button.setAttribute('aria-pressed',String(visible));button.setAttribute('aria-label',visible?'Ocultar senha':'Mostrar senha');
+});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)maskPasswords()});
+element('loginForm').addEventListener('submit',maskPasswords);
+function emailStage(){requestId='';element('recoveryEmailForm').hidden=false;element('recoveryResetForm').hidden=true;element('recoveryResetForm').reset();element('recoveryMessage').textContent='';maskPasswords()}
+element('forgotPassword').addEventListener('click',()=>{emailStage();dialog.showModal();element('recoveryEmail').focus()});
+element('closeRecovery').addEventListener('click',()=>{if(!busy)dialog.close()});
+element('requestAnotherCode').addEventListener('click',()=>{if(!busy)emailStage()});
+dialog.addEventListener('cancel',event=>{if(busy)event.preventDefault()});
+dialog.addEventListener('close',()=>{emailStage();element('recoveryEmailForm').reset()});
+function setBusy(value){
+ busy=value;
+ ['sendRecoveryCode','resetPasswordButton','closeRecovery','requestAnotherCode'].forEach(id=>element(id).disabled=value);
+}
+async function callRecovery(path,body){
+ const base=globalThis.FLORINDO_AI_URL;
+ if(!base)throw Error('Serviço de recuperação ainda não configurado.');
+ const response=await fetch(base.replace(/\/$/,'')+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok)throw Error(data.error||'Não foi possível concluir. Tente novamente.');
+ return data;
+}
+function showError(error){element('recoveryMessage').textContent=error.name==='TimeoutError'||error.name==='TypeError'?'Não foi possível conectar. Verifique a internet e tente novamente.':error.message}
+element('recoveryEmailForm').addEventListener('submit',async event=>{
+ event.preventDefault();if(busy)return;setBusy(true);element('recoveryMessage').textContent='Enviando…';
+ try{
+  const result=await callRecovery('/auth/request-reset',{email:element('recoveryEmail').value.trim()});
+  requestId=result.requestId;element('recoveryEmailForm').hidden=true;element('recoveryResetForm').hidden=false;
+  element('recoveryMessage').textContent=result.message;element('recoveryCode').focus();
+ }catch(error){showError(error)}finally{setBusy(false)}
+});
+element('recoveryResetForm').addEventListener('submit',async event=>{
+ event.preventDefault();if(busy)return;
+ if(element('newPassword').value!==element('confirmPassword').value){element('recoveryMessage').textContent='As senhas precisam ser iguais.';return}
+ setBusy(true);maskPasswords();element('recoveryMessage').textContent='Alterando senha…';
+ try{
+  const result=await callRecovery('/auth/reset',{requestId,code:element('recoveryCode').value.trim(),password:element('newPassword').value});
+  if(result.username)element('loginUsername').value=result.username;
+  element('loginPassword').value='';setBusy(false);dialog.close();showLogin(result.message);
+ }catch(error){showError(error)}finally{setBusy(false)}
+});
+})();
+</script>
