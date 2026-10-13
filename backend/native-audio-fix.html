@@ -1,8 +1,8 @@
 
 <script>
-let florindoNativeAudioRecording=false;
+let florindoNativeAudioRecording=false,florindoNativeVoiceProxy=null;
 const florindoWebAudioToggle=florindoAudioToggle;
-function florindoNativeVoice(){return globalThis.Capacitor?.Plugins?.FlorindoVoiceRecorder||null}
+function florindoNativeVoice(){if(florindoNativeVoiceProxy)return florindoNativeVoiceProxy;const cap=globalThis.Capacitor;if(!cap?.isNativePlatform?.()||!cap?.registerPlugin)return null;try{florindoNativeVoiceProxy=cap.registerPlugin('FlorindoVoiceRecorder');return florindoNativeVoiceProxy}catch{return null}}
 function florindoBase64AudioBlob(base64,mime='audio/mp4'){const raw=atob(String(base64||''));const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return new Blob([bytes],{type:mime})}
 florindoAudioToggle=async function(){
  const native=florindoNativeVoice();
