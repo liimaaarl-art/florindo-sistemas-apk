@@ -23,10 +23,11 @@ jobs:
           cat .source/index.html.gz.b64.part.* | base64 -d | gzip -d > index.html
           test -s index.html
 
-      - name: Aplicar cadastro, login e ajuste da barra superior
+      - name: Aplicar cadastro, login e retomada rápida
         run: |
           python3 .github/scripts/patch-login.py index.html
           python3 .github/scripts/patch-final-login.py index.html
+          python3 .github/scripts/patch-login-resume.py index.html
           grep -q 'id="loginForm"' index.html
           grep -q 'id="loginModeRegister"' index.html
           grep -q 'id="loginModeLogin"' index.html
@@ -35,6 +36,7 @@ jobs:
           grep -q 'FINAL_LOGIN_VERSION' index.html
           grep -q 'florindo_register' index.html
           grep -q 'florindo_login' index.html
+          grep -q 'florindoFastResume' index.html
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
@@ -46,8 +48,10 @@ jobs:
           node --test backend/engine.test.mjs backend/recovery.test.mjs backend/prototype.test.mjs backend/rpc.test.mjs
           python3 .github/scripts/patch-recovery.py index.html
           python3 .github/scripts/patch-gemini.py index.html
+          python3 .github/scripts/patch-native-audio-ui.py index.html
           grep -q 'florindoAudioRecord' index.html
           grep -q 'florindoAgendaDialog' index.html
+          grep -q 'FlorindoVoiceRecorder' index.html
 
       - name: Publicar servidor Neon + Groq
         env:
@@ -170,6 +174,7 @@ jobs:
         run: |
           rm -rf android
           npx cap add android
+          python3 .github/scripts/patch-android-voice.py
 
       - name: Configurar rede e microfone Android
         run: |
@@ -209,6 +214,8 @@ jobs:
         run: |
           grep -n "android.permission.INTERNET" android/app/src/main/AndroidManifest.xml
           grep -n "android.permission.RECORD_AUDIO" android/app/src/main/AndroidManifest.xml
+          grep -n "registerPlugin(VoiceRecorderPlugin.class)" android/app/src/main/java/com/florindosistemas/central/MainActivity.java
+          grep -n "name = \"FlorindoVoiceRecorder\"" android/app/src/main/java/com/florindosistemas/central/VoiceRecorderPlugin.java
           grep -n "florindo_register" www/index.html
           grep -n "florindo_login" www/index.html
           grep -n "loginModeRegister" www/index.html
@@ -216,9 +223,11 @@ jobs:
           grep -n "loginShowPassword" www/index.html
           grep -n "loginRemember" www/index.html
           grep -n "FINAL_LOGIN_VERSION" www/index.html
+          grep -n "florindoFastResume" www/index.html
           grep -n "safe-area-inset-top" www/index.html
           grep -n "FLORINDO_AI_URL" www/index.html
           grep -n "florindoAudioRecord" www/index.html
+          grep -n "FlorindoVoiceRecorder" www/index.html
           grep -n "florindoAgendaDialog" www/index.html
           grep -q '"appId": "com.florindosistemas.central"' capacitor.config.json
           grep -q '"appName": "Florindo Sistemas"' capacitor.config.json
