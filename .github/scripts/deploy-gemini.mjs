@@ -1,11 +1,11 @@
 import {readFile,writeFile,appendFile} from 'node:fs/promises';
 const project='odd-thunder-06895093',branch='br-late-night-b59w9eej',slug='florindoai';
-if(!process.env.NEON_API_KEY||!process.env.GEMINI_API_KEY||!process.env.PROTOTYPE_SETUP_KEY)throw Error('Configuração do servidor incompleta.');
+if(!process.env.NEON_API_KEY||!process.env.GROQ_API_KEY||!process.env.PROTOTYPE_SETUP_KEY)throw Error('Configuração do servidor incompleta.');
 const base='https://console.neon.tech/api/v2/projects/'+project+'/branches/'+branch+'/functions/'+slug;
 const headers={Authorization:'Bearer '+process.env.NEON_API_KEY};
 const form=new FormData();
 form.append('zip',new Blob([await readFile('backend/function.zip')],{type:'application/zip'}),'function.zip');
-form.append('environment',JSON.stringify({GEMINI_API_KEY:process.env.GEMINI_API_KEY,PROTOTYPE_SETUP_KEY:process.env.PROTOTYPE_SETUP_KEY}));
+form.append('environment',JSON.stringify({GROQ_API_KEY:process.env.GROQ_API_KEY,PROTOTYPE_SETUP_KEY:process.env.PROTOTYPE_SETUP_KEY}));
 form.append('runtime','nodejs24');
 const response=await fetch(base+'/deployments',{method:'POST',headers,body:form,signal:AbortSignal.timeout(60000)});
 if(!response.ok)throw Error('Neon recusou a publicação. HTTP '+response.status);
@@ -31,4 +31,4 @@ const tokenScript='<script>globalThis.FLORINDO_APP_TOKEN='+JSON.stringify(token)
 html=html.replace('</body>',tokenScript+'\n</body>');
 await writeFile('index.html',html,'utf8');
 await appendFile(process.env.GITHUB_ENV,'FLORINDO_AI_URL='+url+'\nFLORINDO_PROTOTYPE_TOKEN='+token+'\n');
-console.log('Servidor atualizado e sessão técnica do aplicativo preparada.');
+console.log('Servidor Groq atualizado e sessão técnica do aplicativo preparada.');
