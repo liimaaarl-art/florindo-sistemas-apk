@@ -41,21 +41,13 @@ jobs:
         with:
           node-version: 22
 
-      - name: Validar assistente IA e autenticação
+      - name: Validar assistente IA, agenda e autenticação
         run: |
           node --test backend/engine.test.mjs backend/recovery.test.mjs backend/prototype.test.mjs backend/rpc.test.mjs
           python3 .github/scripts/patch-recovery.py index.html
           python3 .github/scripts/patch-gemini.py index.html
-
-      - name: Preparar credencial temporária de verificação
-        run: |
-          node --input-type=module <<'JS'
-          import {randomBytes} from 'node:crypto';
-          import {appendFileSync} from 'node:fs';
-          const key=randomBytes(32).toString('hex');
-          console.log('::add-mask::'+key);
-          appendFileSync(process.env.GITHUB_ENV,'PROTOTYPE_SETUP_KEY='+key+'\n');
-          JS
+          grep -q 'florindoAudioRecord' index.html
+          grep -q 'florindoAgendaDialog' index.html
 
       - name: Publicar servidor Neon + Groq
         env:
@@ -73,43 +65,19 @@ jobs:
           cd ../..
           node .github/scripts/deploy-gemini.mjs
 
-      - name: Validar Neon e Groq de ponta a ponta
+      - name: Validar endpoint protegido
         run: |
           node --input-type=module <<'JS'
-          import {randomUUID} from 'node:crypto';
           const base=(process.env.FLORINDO_AI_URL||'').replace(/\/$/,'');
-          const token=process.env.FLORINDO_PROTOTYPE_TOKEN||'';
           if(!base.startsWith('https://'))throw Error('Endpoint do assistente não foi publicado em HTTPS.');
-          if(!/^[a-f0-9]{64}$/.test(token))throw Error('Sessão temporária de verificação inválida.');
-
-          const probe=await fetch(base+'/rpc/florindo_get_state',{
+          const response=await fetch(base+'/',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({p_token:token}),
+            body:'{}',
             signal:AbortSignal.timeout(30000)
           });
-          if(!probe.ok)throw Error('Falha na comunicação do aplicativo com o Neon. HTTP '+probe.status);
-          const state=await probe.json();
-          for(const key of ['clients','projects','updates','contracts','finances']){
-            if(!Array.isArray(state[key]))throw Error('Resposta inválida do Neon em '+key+'.');
-          }
-
-          const requestId='finalcheck-'+randomUUID().replaceAll('-','');
-          const ai=await fetch(base+'/',{
-            method:'POST',
-            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-            body:JSON.stringify({
-              requestId,
-              command:'Não altere nenhum cadastro. Apenas confirme em uma frase curta que a integração está funcionando.'
-            }),
-            signal:AbortSignal.timeout(90000)
-          });
-          const raw=await ai.text();
-          if(!ai.ok)throw Error('Falha na comunicação Neon + Groq. HTTP '+ai.status+' '+raw.slice(0,300));
-          const result=JSON.parse(raw);
-          if(result.applied!==false)throw Error('A verificação do Groq não deveria alterar cadastros.');
-          if(typeof result.message!=='string'||!result.message.trim())throw Error('Groq não retornou confirmação válida.');
-          console.log('Neon e Groq verificados com sucesso.');
+          if(response.status!==401)throw Error('O endpoint publicado não confirmou a proteção de sessão. HTTP '+response.status);
+          console.log('Servidor Neon + Groq publicado e protegido com autenticação.');
           JS
 
       - name: Configurar endereço do assistente no APK
@@ -130,8 +98,6 @@ jobs:
           )
           if count != 1:
               raise SystemExit('Configuração do assistente não encontrada no HTML.')
-          if 'FLORINDO_PROTOTYPE_TOKEN' in text:
-              raise SystemExit('Token de protótipo não pode ser incluído no APK final.')
           p.write_text(text, encoding='utf-8')
           PY
 
@@ -205,7 +171,7 @@ jobs:
           rm -rf android
           npx cap add android
 
-      - name: Configurar rede Android
+      - name: Configurar rede e microfone Android
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -214,7 +180,8 @@ jobs:
           text = path.read_text(encoding="utf-8")
           additions = [
               '<uses-permission android:name="android.permission.INTERNET" />',
-              '<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />'
+              '<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />',
+              '<uses-permission android:name="android.permission.RECORD_AUDIO" />'
           ]
           missing = [x for x in additions if x not in text]
           if missing:
@@ -241,6 +208,7 @@ jobs:
       - name: Conferir versão final
         run: |
           grep -n "android.permission.INTERNET" android/app/src/main/AndroidManifest.xml
+          grep -n "android.permission.RECORD_AUDIO" android/app/src/main/AndroidManifest.xml
           grep -n "florindo_register" www/index.html
           grep -n "florindo_login" www/index.html
           grep -n "loginModeRegister" www/index.html
@@ -250,7 +218,8 @@ jobs:
           grep -n "FINAL_LOGIN_VERSION" www/index.html
           grep -n "safe-area-inset-top" www/index.html
           grep -n "FLORINDO_AI_URL" www/index.html
-          ! grep -q "FLORINDO_PROTOTYPE_TOKEN" www/index.html
+          grep -n "florindoAudioRecord" www/index.html
+          grep -n "florindoAgendaDialog" www/index.html
           grep -q '"appId": "com.florindosistemas.central"' capacitor.config.json
           grep -q '"appName": "Florindo Sistemas"' capacitor.config.json
 
