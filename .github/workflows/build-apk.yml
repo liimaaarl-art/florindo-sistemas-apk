@@ -41,7 +41,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Validar assistente Gemini e autenticação
+      - name: Validar assistente IA e autenticação
         run: |
           node --test backend/engine.test.mjs backend/recovery.test.mjs backend/prototype.test.mjs backend/rpc.test.mjs
           python3 .github/scripts/patch-recovery.py index.html
@@ -57,13 +57,13 @@ jobs:
           appendFileSync(process.env.GITHUB_ENV,'PROTOTYPE_SETUP_KEY='+key+'\n');
           JS
 
-      - name: Publicar servidor Neon + Gemini
+      - name: Publicar servidor Neon + Groq
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          if [ -z "$NEON_API_KEY" ] || [ -z "$GEMINI_API_KEY" ]; then
-            echo "::error::Versão final exige NEON_API_KEY e GEMINI_API_KEY configuradas."
+          if [ -z "$NEON_API_KEY" ] || [ -z "$GROQ_API_KEY" ]; then
+            echo "::error::Versão final exige NEON_API_KEY e GROQ_API_KEY configuradas."
             exit 1
           fi
           npm install --prefix backend --no-audit --no-fund
@@ -73,7 +73,7 @@ jobs:
           cd ../..
           node .github/scripts/deploy-gemini.mjs
 
-      - name: Validar Neon e Gemini de ponta a ponta
+      - name: Validar Neon e Groq de ponta a ponta
         run: |
           node --input-type=module <<'JS'
           import {randomUUID} from 'node:crypto';
@@ -105,11 +105,11 @@ jobs:
             signal:AbortSignal.timeout(90000)
           });
           const raw=await ai.text();
-          if(!ai.ok)throw Error('Falha na comunicação Neon + Gemini. HTTP '+ai.status+' '+raw.slice(0,300));
+          if(!ai.ok)throw Error('Falha na comunicação Neon + Groq. HTTP '+ai.status+' '+raw.slice(0,300));
           const result=JSON.parse(raw);
-          if(result.applied!==false)throw Error('A verificação do Gemini não deveria alterar cadastros.');
-          if(typeof result.message!=='string'||!result.message.trim())throw Error('Gemini não retornou confirmação válida.');
-          console.log('Neon e Gemini verificados com sucesso.');
+          if(result.applied!==false)throw Error('A verificação do Groq não deveria alterar cadastros.');
+          if(typeof result.message!=='string'||!result.message.trim())throw Error('Groq não retornou confirmação válida.');
+          console.log('Neon e Groq verificados com sucesso.');
           JS
 
       - name: Configurar endereço do assistente no APK
