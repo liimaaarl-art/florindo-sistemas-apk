@@ -2,12 +2,35 @@
 <script>
 let florindoNativeAudioRecording=false,florindoNativeVoiceProxy=null;
 const florindoWebAudioToggle=florindoAudioToggle;
-function florindoNativeVoice(){if(florindoNativeVoiceProxy)return florindoNativeVoiceProxy;const cap=globalThis.Capacitor;if(!cap?.isNativePlatform?.()||!cap?.registerPlugin)return null;try{florindoNativeVoiceProxy=cap.registerPlugin('FlorindoVoiceRecorder');return florindoNativeVoiceProxy}catch{return null}}
+const florindoNativeAudioVersion='android-plugin-v2';
+function florindoNativeVoice(){
+ if(florindoNativeVoiceProxy)return florindoNativeVoiceProxy;
+ const cap=globalThis.Capacitor;
+ try{
+  const exposed=cap?.Plugins?.FlorindoVoiceRecorder;
+  if(exposed){florindoNativeVoiceProxy=exposed;return florindoNativeVoiceProxy}
+  if(typeof cap?.registerPlugin==='function'){
+   florindoNativeVoiceProxy=cap.registerPlugin('FlorindoVoiceRecorder');
+   return florindoNativeVoiceProxy;
+  }
+ }catch(e){console.warn('FlorindoVoiceRecorder não carregou',e)}
+ return null;
+}
+function florindoRunningNative(){
+ const cap=globalThis.Capacitor;
+ try{return cap?.getPlatform?.()==='android'||cap?.getPlatform?.()==='ios'||cap?.isNativePlatform?.()===true||!!cap?.Plugins}catch{return false}
+}
 function florindoBase64AudioBlob(base64,mime='audio/mp4'){const raw=atob(String(base64||''));const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return new Blob([bytes],{type:mime})}
 florindoAudioToggle=async function(){
  const native=florindoNativeVoice();
- if(!native)return florindoWebAudioToggle();
  const status=$('florindoAudioStatus'),button=$('florindoAudioRecord');
+ if(!native){
+  if(florindoRunningNative()){
+   if(status)status.textContent='O gravador nativo não foi carregado nesta instalação. Atualize o aplicativo para a versão mais recente.';
+   return;
+  }
+  return florindoWebAudioToggle();
+ }
  try{
   if(florindoNativeAudioRecording){
    if(florindoAudioTimer){clearTimeout(florindoAudioTimer);florindoAudioTimer=null}
@@ -33,7 +56,8 @@ florindoAudioToggle=async function(){
   florindoNativeAudioRecording=false;
   if(button)button.textContent='🎙️ Gravar áudio';
   const message=String(e?.message||e||'');
-  if(status)status.textContent=/permission|permiss|microphone|microfone/i.test(message)?'O Android não liberou o microfone para o aplicativo. Abra as permissões do Florindo Sistemas, permita Microfone e tente novamente.':'Não foi possível iniciar a gravação. Tente novamente.';
+  console.warn('Falha no gravador nativo',e);
+  if(status)status.textContent=/permission|permiss|microphone|microfone/i.test(message)?'O Android não liberou o microfone para o aplicativo. Abra as permissões do Florindo Sistemas, permita Microfone e tente novamente.':('Falha ao iniciar o gravador nativo'+(message?' — '+message:''));
  }
 };
 </script>
