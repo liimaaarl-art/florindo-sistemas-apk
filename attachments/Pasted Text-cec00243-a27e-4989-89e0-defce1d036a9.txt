@@ -1,0 +1,562 @@
+Quero que você desenvolva um aplicativo completo, profissional e funcional, usando como referência de nível de detalhamento um sistema de gestão empresarial moderno.
+
+Não quero apenas um protótipo visual ou telas sem funcionamento. Quero um sistema real, com banco de dados, persistência, integrações, inteligência artificial, responsividade para celular e computador e estrutura preparada para virar aplicativo Android.
+
+O sistema deve ter visual premium, moderno, organizado e intuitivo, evitando aparência de sistema genérico. Trabalhe com cards, ícones, menus bem distribuídos, indicadores, gráficos quando fizer sentido, modais elegantes, feedback visual de ações e boa experiência principalmente no celular.
+
+1. LOGIN E SEGURANÇA
+
+Crie uma tela inicial de autenticação com:
+
+- Fazer cadastro
+- Já tenho login
+- E-mail
+- Senha
+- Confirmação de senha no cadastro
+- Mostrar/ocultar senha
+- Opção de manter acesso salvo
+- Logout
+- Sessão persistente
+- Proteção das informações de cada usuário
+
+Nenhum usuário deve conseguir visualizar informações de outro usuário.
+
+O frontend nunca deve possuir senhas de banco de dados, chaves de API ou informações sensíveis expostas no código.
+
+2. BANCO DE DADOS ONLINE
+
+Utilize PostgreSQL em nuvem, preferencialmente Neon.
+
+Todas as principais informações devem ficar salvas online.
+
+Quero sincronização entre dispositivos. Se eu cadastrar algo pelo computador, preciso conseguir abrir o aplicativo no celular e encontrar a mesma informação.
+
+Estruture o banco com tabelas relacionadas e IDs únicos.
+
+O sistema também pode utilizar armazenamento local como fallback quando necessário, mas o banco online deve ser a fonte principal dos dados.
+
+3. DASHBOARD / PÁGINA INICIAL
+
+Crie uma página inicial mostrando uma visão geral da operação.
+
+Exibir cards como:
+
+- Clientes ativos
+- Clientes em negociação
+- Sistemas/projetos ativos
+- Sistemas em manutenção
+- Tarefas pendentes
+- Contratos ativos
+- Valores a receber
+- Valores recebidos no mês
+- Próximos compromissos
+
+Também mostrar:
+
+- tarefas mais urgentes;
+- próximos compromissos;
+- clientes que precisam de atenção;
+- projetos com atualização pendente;
+- resumo financeiro;
+- atividades recentes.
+
+Quero uma página inicial realmente útil para saber rapidamente o que está acontecendo na empresa.
+
+4. CLIENTES
+
+Criar um módulo completo de clientes.
+
+Cada cliente pode possuir:
+
+- Nome
+- Empresa
+- Telefone
+- WhatsApp
+- E-mail
+- Segmento
+- CPF/CNPJ quando necessário
+- Endereço
+- Data de cadastro
+- Status
+- Informações adicionais
+- Observações internas
+- Histórico
+- Sistemas vinculados
+- Contratos vinculados
+- Valores financeiros vinculados
+- Tarefas relacionadas
+- Compromissos relacionados
+
+Status possíveis:
+
+- Ativo
+- Em negociação
+- Inativo
+
+Quero busca, filtros, edição, arquivamento e visualização detalhada de cada cliente.
+
+Ao entrar em um cliente, quero enxergar praticamente um prontuário comercial completo daquele cliente.
+
+5. SISTEMAS / PROJETOS
+
+Criar uma área onde eu possa controlar todos os sistemas e projetos desenvolvidos.
+
+Cada projeto deve possuir:
+
+- Nome
+- Cliente relacionado
+- Descrição
+- Data de início
+- Prazo
+- Status
+- URL do sistema
+- Repositório
+- Banco de dados utilizado
+- Nome/projeto do banco
+- Servidor/backend
+- Configurações técnicas
+- Observações internas
+- Valor do projeto
+- Mensalidade, quando existir
+
+Status:
+
+- Planejamento
+- Em andamento
+- Entregue
+- Manutenção
+- Pausado
+
+Ao abrir um projeto quero visualizar todo o histórico daquele sistema.
+
+6. ATUALIZAÇÕES E VERSÕES
+
+Cada sistema deve possuir um histórico de versões e atualizações.
+
+Registrar:
+
+- Número ou nome da versão
+- Data
+- Descrição da alteração
+- Problema corrigido
+- Nova funcionalidade
+- Status
+- Observações
+- Projeto relacionado
+
+Status:
+
+- Planejada
+- Em andamento
+- Entregue
+
+Quero poder saber exatamente o que mudou em cada versão de cada aplicativo.
+
+7. CONTRATOS
+
+Criar um módulo de contratos.
+
+Cada contrato deve poder ser vinculado a cliente e projeto.
+
+Campos:
+
+- Cliente
+- Sistema/projeto
+- Tipo de contrato
+- Data inicial
+- Data final
+- Valor
+- Mensalidade
+- Condições
+- Observações
+- Status
+- Arquivo/documento relacionado
+
+Status:
+
+- Rascunho
+- Aguardando assinatura
+- Assinado
+- Encerrado
+
+Mostrar alertas para contratos próximos do vencimento.
+
+8. FINANCEIRO
+
+Criar um módulo financeiro completo.
+
+Registrar:
+
+- Entradas
+- Saídas
+- Cliente
+- Projeto
+- Categoria
+- Descrição
+- Valor
+- Data
+- Data de vencimento
+- Data de pagamento
+- Forma de pagamento
+- Status
+- Observações
+
+Status:
+
+- Pendente
+- Pago
+- Cancelado
+
+Quero visualizar:
+
+- Total recebido no mês
+- Total pendente
+- Total de despesas
+- Lucro
+- Receita mensal
+- Receita anual
+- Valores por cliente
+- Valores por projeto
+- Histórico financeiro
+
+Incluir gráficos e filtros por período.
+
+9. TAREFAS
+
+Criar uma área de tarefas.
+
+As tarefas poderão ser:
+
+- Empresa
+- Pessoal
+
+Cada tarefa deve possuir:
+
+- Título
+- Descrição
+- Data
+- Horário quando necessário
+- Prioridade
+- Categoria
+- Cliente relacionado, se existir
+- Projeto relacionado, se existir
+- Status concluído/não concluído
+
+Prioridades:
+
+- Alta
+- Normal
+- Baixa
+
+As tarefas mais urgentes precisam aparecer primeiro.
+
+10. AGENDA
+
+Criar uma agenda completa integrada ao banco de dados.
+
+Cada compromisso deve possuir:
+
+- Título
+- Data
+- Horário
+- Duração
+- Cliente opcional
+- Local
+- Observações
+- Status
+
+Quero visualização organizada da agenda e integração dela com clientes e tarefas.
+
+Quando eu alterar ou criar um compromisso, a informação deve ficar salva no servidor.
+
+11. ASSISTENTE DE INTELIGÊNCIA ARTIFICIAL
+
+Essa é uma das partes mais importantes.
+
+Crie dentro do aplicativo uma aba chamada:
+
+“Assistente IA”
+
+Utilize uma API de IA rápida, preferencialmente Groq.
+
+A IA deve entender comandos naturais em português.
+
+Exemplos:
+
+“Cadastre João da Silva como novo cliente.”
+
+“Coloque uma tarefa para amanhã para ligar para a Jéssica.”
+
+“Quanto tenho para receber este mês?”
+
+“Quais clientes estão com pagamento pendente?”
+
+“Cadastre uma reunião com Gabriel amanhã às 14 horas.”
+
+“Altere o projeto da empresa X para manutenção.”
+
+“Me mostre meus compromissos de amanhã.”
+
+“Crie uma tarefa pessoal para pagar a Vivo.”
+
+A IA deve interpretar o pedido e transformar a intenção em ações estruturadas dentro do sistema.
+
+Por segurança, a IA NÃO deve possuir acesso direto irrestrito ao banco.
+
+A IA deve retornar ações estruturadas, preferencialmente JSON, e o backend deve validar a ação antes de alterar qualquer informação.
+
+12. COMANDO POR VOZ
+
+Dentro do Assistente IA, quero um botão de microfone.
+
+Quero poder falar normalmente, por exemplo:
+
+“Amanhã às duas da tarde preciso ir conversar com Gabriel sobre a barbearia.”
+
+O aplicativo deve:
+
+1. Capturar o áudio.
+2. Transcrever.
+3. Interpretar com IA.
+4. Identificar que é um compromisso.
+5. Criar o compromisso automaticamente.
+6. Salvar no banco.
+7. Mostrar a confirmação.
+
+Utilize uma solução de transcrição de alta qualidade, como Whisper Large V3, quando disponível.
+
+No Android, dê preferência ao uso correto do microfone nativo.
+
+13. IA COM CONTEXTO DO SISTEMA
+
+A IA deve conseguir consultar informações permitidas do sistema.
+
+Por exemplo:
+
+“Qual cliente está me pagando mais?”
+
+“Quantos projetos estão em andamento?”
+
+“O que tenho para fazer amanhã?”
+
+“Qual foi a última atualização do aplicativo da Jéssica?”
+
+“Quanto recebi este mês?”
+
+“Tem algum contrato vencendo?”
+
+Ela deve responder utilizando os dados reais cadastrados.
+
+14. AÇÕES RÁPIDAS
+
+Quero botões rápidos espalhados pelo sistema para:
+
+- Novo cliente
+- Novo projeto
+- Nova tarefa
+- Novo compromisso
+- Nova entrada
+- Nova saída
+- Nova atualização
+- Novo contrato
+
+Evite obrigar o usuário a navegar por várias páginas para realizar ações simples.
+
+15. BUSCA GLOBAL
+
+Adicionar uma busca geral no sistema.
+
+Ao pesquisar um nome ou termo, procurar em:
+
+- Clientes
+- Projetos
+- Contratos
+- Atualizações
+- Tarefas
+- Agenda
+
+16. BACKUP
+
+Criar opção de:
+
+- Exportar backup dos dados
+- Importar backup
+- Validar arquivo antes da importação
+
+O backup pode utilizar JSON estruturado.
+
+17. RESPONSIVIDADE
+
+O sistema deve funcionar muito bem em:
+
+- Android
+- Celular
+- Tablet
+- Notebook
+- Desktop
+
+A prioridade é celular.
+
+Não quero apenas reduzir o desktop para caber na tela. Quero uma interface realmente adaptada para mobile.
+
+18. APLICATIVO ANDROID
+
+Prepare o projeto para ser convertido em aplicativo Android utilizando Capacitor ou tecnologia equivalente.
+
+Configurar:
+
+- Nome do aplicativo
+- Ícone
+- Splash Screen
+- Permissão de internet
+- Permissão de microfone
+- Comunicação segura com servidor
+- Persistência de login
+
+19. GITHUB E VERSIONAMENTO
+
+Estruture o projeto para GitHub.
+
+Quero:
+
+- Código organizado
+- Versionamento
+- README
+- Separação frontend/backend
+- .gitignore correto
+- Nenhuma chave secreta enviada ao GitHub
+
+Quando possível, configure GitHub Actions para gerar automaticamente o APK Android a partir das versões publicadas.
+
+20. DESIGN
+
+Quero uma identidade visual premium.
+
+Características:
+
+- profissional;
+- moderna;
+- limpa;
+- sofisticada;
+- tecnológica;
+- responsiva;
+- animações sutis;
+- boa hierarquia visual;
+- menu lateral no desktop;
+- navegação adaptada no celular;
+- cards;
+- ícones;
+- gráficos;
+- modais;
+- notificações elegantes;
+- estados de carregamento;
+- mensagens de sucesso e erro.
+
+Evite excesso de informações na mesma tela.
+
+21. EXPERIÊNCIA DE USO
+
+Todas as ações devem dar retorno ao usuário.
+
+Exemplo:
+
+“Cliente cadastrado com sucesso.”
+
+“Compromisso criado para 16/10 às 14h.”
+
+“Pagamento marcado como recebido.”
+
+“Não foi possível conectar ao servidor.”
+
+Não permita que o usuário aperte um botão e não saiba se a ação funcionou.
+
+22. RELACIONAMENTO ENTRE AS INFORMAÇÕES
+
+Essa parte é fundamental.
+
+Não quero módulos isolados.
+
+Tudo deve estar relacionado.
+
+Exemplo:
+
+CLIENTE
+↓
+PROJETO
+↓
+ATUALIZAÇÕES
+↓
+CONTRATO
+↓
+FINANCEIRO
+↓
+TAREFAS
+↓
+AGENDA
+
+Quando eu abrir um cliente, quero poder enxergar todas essas informações relacionadas.
+
+Quando eu abrir um projeto, quero saber:
+
+- de quem é;
+- contrato;
+- valores;
+- atualizações;
+- tarefas;
+- histórico.
+
+23. QUALIDADE DO CÓDIGO
+
+Não quero criar tudo em um único arquivo gigantesco se isso prejudicar manutenção.
+
+Separe responsabilidades corretamente.
+
+Utilize:
+
+- HTML/CSS/JavaScript ou framework adequado no frontend;
+- API/backend seguro;
+- PostgreSQL;
+- variáveis de ambiente;
+- componentes reutilizáveis;
+- validações;
+- tratamento de erros;
+- arquitetura preparada para crescer.
+
+24. ENTREGA
+
+Quero que você desenvolva o projeto funcional e não apenas explique como ele poderia ser feito.
+
+Ao finalizar cada etapa:
+
+- teste os botões;
+- teste cadastros;
+- teste edição;
+- teste exclusão/arquivamento;
+- teste sincronização;
+- teste login;
+- teste banco;
+- teste IA;
+- teste agenda;
+- teste responsividade.
+
+Não considere a funcionalidade pronta apenas porque a interface apareceu.
+
+Primeiro estruture a arquitetura completa do sistema, banco de dados e relacionamento entre módulos.
+
+Depois desenvolva as telas e funcionalidades.
+
+Em seguida faça as integrações.
+
+Por último realize uma auditoria geral procurando:
+
+- botões sem função;
+- campos que não salvam;
+- erros de responsividade;
+- informações que somem ao atualizar a página;
+- funções duplicadas;
+- problemas de segurança;
+- erros de relacionamento entre tabelas;
+- chamadas incorretas da API;
+- problemas no celular.
+
+Quero receber um aplicativo realmente utilizável, com padrão profissional e preparado para evolução contínua.
