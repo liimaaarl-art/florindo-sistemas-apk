@@ -1,0 +1,84 @@
+name: Nexo Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Nexo branch
+        uses: actions/checkout@v4
+        with:
+          ref: grok-nexo-apk
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Configure published Nexo URL
+        env:
+          NEXO_SERVER_URL: ${{ secrets.NEXO_SERVER_URL }}
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const url=(process.env.NEXO_SERVER_URL||'').replace(/\/$/, '');
+          if(!url.startsWith('https://')) {
+            throw new Error('Defina NEXO_SERVER_URL com a origem HTTPS publicada do Nexo.');
+          }
+          const cfg=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));
+          cfg.server={androidScheme:'https',cleartext:false,url};
+          fs.writeFileSync('capacitor.config.json',JSON.stringify(cfg,null,2));
+          JS
+
+      - name: Create Android project
+        run: |
+          rm -rf android
+          npx cap add android
+          npx cap sync android
+
+      - name: Android permissions
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('android/app/src/main/AndroidManifest.xml')
+          text=p.read_text()
+          perms=[
+            '<uses-permission android:name="android.permission.INTERNET" />',
+            '<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />',
+            '<uses-permission android:name="android.permission.RECORD_AUDIO" />',
+            '<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />',
+          ]
+          missing=[x for x in perms if x not in text]
+          if missing:
+            m=re.search(r'<manifest[^>]*>',text)
+            text=text[:m.end()]+'\n    '+'\n    '.join(missing)+text[m.end():]
+            p.write_text(text)
+          PY
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload Nexo APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nexo-Grok-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
