@@ -67,6 +67,8 @@
     height: calc(100dvh - 8.5rem);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
   .rise {
     animation: none;
   }
