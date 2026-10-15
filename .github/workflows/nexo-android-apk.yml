@@ -1,11 +1,16 @@
 name: Nexo Android APK
 
 on:
+  push:
+    branches:
+      - grok-nexo-apk
   workflow_dispatch:
 
 jobs:
   apk:
     runs-on: ubuntu-latest
+    env:
+      NEXO_SERVER_URL: https://nexo-grok-app.vercel.app
     steps:
       - name: Checkout Nexo branch
         uses: actions/checkout@v4
@@ -29,14 +34,12 @@ jobs:
           npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
 
       - name: Configure published Nexo URL
-        env:
-          NEXO_SERVER_URL: ${{ secrets.NEXO_SERVER_URL }}
         run: |
           node --input-type=module <<'JS'
           import fs from 'node:fs';
           const url=(process.env.NEXO_SERVER_URL||'').replace(/\/$/, '');
           if(!url.startsWith('https://')) {
-            throw new Error('Defina NEXO_SERVER_URL com a origem HTTPS publicada do Nexo.');
+            throw new Error('NEXO_SERVER_URL precisa ser uma origem HTTPS publicada do Nexo.');
           }
           const cfg=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));
           cfg.server={androidScheme:'https',cleartext:false,url};
