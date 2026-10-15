@@ -1,0 +1,45 @@
+name: Import Grok Nexo source
+
+on:
+  push:
+    branches:
+      - grok-nexo-apk
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: grok-nexo-apk
+          fetch-depth: 0
+
+      - name: Download Grok workspace from Drive
+        env:
+          SOURCE_URL: "https://sdmntprbrazilsouth.oaiusercontent.com/files/00000000-8084-820e-8d21-55837a488242/raw?se=2026-10-15T22%3A06%3A30Z&sp=r&sv=2026-02-06&sr=b&scid=4c1f44b3-45de-5934-a17b-49ebc075f590&skoid=ba7c401a-35d6-40a0-a0f3-2259cc50bbe2&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-15T11%3A53%3A03Z&ske=2026-10-16T11%3A53%3A03Z&sks=b&skv=2026-02-06&sig=k%2BoINugvrgHRO/Q2lWcUzE9S2md6giqp/ncOiINj9Is%3D"
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 "$SOURCE_URL" --output /tmp/grok-workspace.zip
+          unzip -t /tmp/grok-workspace.zip >/dev/null
+
+      - name: Replace branch contents with Grok project
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          unzip -q /tmp/grok-workspace.zip -d .
+          test -f package.json
+          test -f capacitor.config.json
+          test -f .github/workflows/android-apk.yml
+
+      - name: Commit imported project
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Importar projeto Nexo do Grok [grok-imported]"
+          git push origin HEAD:grok-nexo-apk
