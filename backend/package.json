@@ -2,6 +2,9 @@
   "name": "florindo-gemini-server",
   "private": true,
   "type": "module",
+  "scripts": {
+    "preinstall": "python3 ../.github/scripts/patch-ai-infrastructure.py"
+  },
   "dependencies": {
     "pg": "^8.16.3",
     "@neon/functions": "latest"
